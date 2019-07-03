@@ -1,0 +1,4 @@
+*.jar
+/build/*
+/test/*
+*.mf
