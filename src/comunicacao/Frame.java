@@ -1,39 +1,79 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package comunicacao;
 
-import java.io.Serializable;
-
+//import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
 
 /**
  *
  * @author cpdeivis
  */
-public class Frame extends Checksum implements Serializable{
+public class Frame{
+    private final int endP;
+    private final int endC;
+    private final byte ack;
+    private final short chk;
     private String msg;
+    ArrayList<Byte> frame = new ArrayList();
+//    private ByteBuffer frames;
     
-    public Frame (String info, String flag, String endP, String endC, int i){
-        String chk = Integer.toString(calcula(info));
+    public Frame (String info, char flag, int endP, int endC, int i){
+        this.chk = Cheksum(info.getBytes(Charset.forName("UTF-8")));
         this.msg = new String();
-        this.msg = this.msg.concat(flag); // Insere flag inicial
-        this.msg = this.msg.concat(endP); // Insere endereço de partida
-        this.msg = this.msg.concat(endC); // Insere endereço de chegada
-        //ADICIONAR ESC E ACK NO FRAME    
-        this.msg = this.msg.concat(Integer.toString(i));
-        this.msg = this.msg.concat(addStuffing(info, flag.charAt(0))); // Insere o dado
-        this.msg = this.msg.concat(chk);  // Insere checksum
-        this.msg = this.msg.concat(flag); //Insere flag final
+        this.msg = addStuffing(info, flag);
+        this.endP = endP;
+        this.endC = endC;
+        this.ack = (byte)i;
+        
+        frame.add((Byte)((byte)flag));
+        insertInto(toByteArray(this.endP));
+        insertInto(toByteArray(this.endC));
+        frame.add((Byte)ack);
+        insertInto(toByteArray(this.chk));
+        insertInto(this.msg.getBytes(Charset.forName("UTF-8")));
+        frame.add((Byte)((byte)flag));
     }
     
-    public String extraiInfo (int ini, int fim){
-        return this.msg.substring(ini, fim);
+    private void insertInto(byte[] array){
+        for(byte insert : array)
+            frame.add((Byte)insert);
     }
     
+    public byte[] encode(){
+        byte[] result = new byte[frame.size()];
+        for(int i = 0; i < frame.size(); i++) {
+            result[i] = frame.get(i);
+        }
+        
+        return result;
+    }
     
-    public String addStuffing(String s, char flag){
+    private static byte[] toByteArray(int value) {
+        return new byte[] {
+                (byte)(value >> 24),
+                (byte)(value >> 16),
+                (byte)(value >> 8),
+                (byte)value};
+    }
+    
+    private static byte[] toByteArray(short value) {
+        return new byte[] {
+                (byte)(value >> 8),
+                (byte)value};
+    }
+    
+    private static short Cheksum (byte[] s){
+        short soma = 0;
+        for(byte a : s){
+            soma += a;
+        }
+        while (soma > 9999){
+            soma = (short)(soma - 9999);
+        }
+        return soma;
+    }
+    
+    public static String addStuffing(String s, char flag){
         StringBuilder aux = new StringBuilder(s);        
         char c;
         for (int i = 0; i < s.length(); i++){
@@ -41,13 +81,12 @@ public class Frame extends Checksum implements Serializable{
             if (c == flag){
                 aux.insert(i, flag);
                 i++;
-               // System.out.println("Byte stuffing gerado...");
             }
         }
         return aux.substring(0);
     }
     
-    public String rmvStuffing(String s, char flag){
+    public static String rmvStuffing(String s, char flag){
         StringBuilder aux = new StringBuilder(s);        
         char c;
         for (int i = 0; i < aux.length(); i++){
@@ -55,19 +94,8 @@ public class Frame extends Checksum implements Serializable{
             if (c == flag){
                 aux.deleteCharAt(i);
                 i++;
-               // System.out.println("Byte stuffing gerado...");
             }
         }
         return aux.substring(0);
     }
-    
-    @Override
-    public String toString(){
-        return this.msg;
-    }
-    
-    public void setMsg(String s) {
-        this.msg = s;
-    }
-    
 }

@@ -1,69 +1,71 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package comunicacao;
 
-
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.Charset;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.io.EOFException;
 
+import java.util.ArrayList;
 
 /**
  *
  * @author cpdeivis
  */
-public class Servidor extends Thread{
+public class Servidor implements Runnable{
+    private final int port;
+    private final int tam;
+    private final int frames;
+    
+    public Servidor(int port, int tam, int maxf){
+        this.port = port;
+        this.tam = tam;
+        this.frames = maxf;
+    }
+    
     @Override
     public void run(){
         try{
-            ServerSocket server = new ServerSocket(1234);         
-            Frame f;
-            String msg, info;
-            int chk, ack, tamChk = 4;
+            ServerSocket server = new ServerSocket(port);
+            
+            Freime f;
             
             while (true){
                 Socket client = server.accept();
                 System.out.println("Conectado ao IP: " + client.getInetAddress().getHostAddress());
-                ObjectOutputStream sai = new ObjectOutputStream (client.getOutputStream());
-                ObjectInputStream ent = new ObjectInputStream (client.getInputStream());
                 
-                do{
-                    f = (Frame) ent.readObject(); 
-                    
+                InputStream receptor = client.getInputStream();
+                OutputStream emissor = client.getOutputStream();
+                
+                int i = 0;
+
+                do{ 
                     System.out.println("Servidor: Verificando frame.. ");
-                    ack = Integer.parseInt(f.extraiInfo(19, 20)); // extrai ack
-                    msg = f.extraiInfo(21, f.toString().length() - 1); // extrai dado e checksum
-                    info = msg.substring(msg.length() - tamChk, msg.length()); // pega checksum
-                    msg = f.rmvStuffing(msg, f.extraiInfo(0, 1).charAt(0)); // procura e remove byte stuffing
-                    msg = msg.substring(0, msg.length() - info.length()); // pega dado
-                    chk = Integer.parseInt(info.trim()); // transforma para inteiro
 
-                    //System.out.println(f.toString()+"|"+chk+"|"+f.calcula(msg));
+                    f = new Freime(receptor.readNBytes(tam + 15));
                     
-                    if(chk == f.calcula(msg)){ // verifica se o dado está correto
-                        sai.writeObject(ack);
-                    }else{
-                        sai.flush();
+                    if(f.decode()){
+                        if(f.chk == f.Cheksum(f.msg.getBytes(Charset.forName("UTF-8"))))
+                            emissor.write(f.ack);
+                        else
+                            emissor.flush();
+   
+                        i = 0;
+                    } else{
+                        i++;
+                        if(i > frames && receptor.read() == -1)
+                            break;
                     }
-                    
-                    if(!client.isConnected()){
-                        server.close();
-                        break;
-                    }
-
-                }while(true);
-            }            
-        }catch (Exception e){
-            //Logger.getLogger(Servidor.class.getName()).log(Level.SEVERE, null, e);
+                } while(client.isConnected() && !client.isClosed());
+                
+                server.close();
+                break;
+            }
+            
+        } catch (Exception e){
+            Logger.getLogger(Servidor.class.getName()).log(Level.SEVERE, null, e);
         }
-    }    
-    
+    }
 }

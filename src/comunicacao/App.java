@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package comunicacao;
 
 /**
@@ -11,17 +6,16 @@ package comunicacao;
  */
 public class App {
     public static void main (String[] args) throws InterruptedException{
-        Servidor s = new Servidor();
-        Cliente c = new Cliente();
+        Runnable server = new Servidor(1234, 200, 5);
+        Runnable client = new Cliente(1234, 200, 5, '@');
         
-        Thread ts = new Thread(s);
-        Thread tc = new Thread(c);
+        Thread ts = new Thread(server);
+        Thread tc = new Thread(client);
         
         ts.start();
         tc.start();
         
         tc.join();
         ts.join();
-        
     }
 }
