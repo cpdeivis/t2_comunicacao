@@ -49,22 +49,22 @@ public class Cliente implements Runnable{
             System.out.println("Client: Enviando " + frames.size() + " frames..");
             
             int i = 0, espera = 0, confirma = 0;
-            Boolean enviou = false;
+
             while(i < frames.size()){
                 System.out.println("Client: Montando bloco do " + i + " até " + (i+maxf));
                 System.out.println("Client: Gerando id para o bloco");
                 f = montaJanela(frames, i);
                 
 //                TESTE PARA DESLOCAMENTO DA JANELA
-//                for(int j = f.length-1; j >= 0; j--){
-//                    emissor.write(f[j].encode());
-//                    emissor.flush();
-//                }
-                
-                for(Freime aux : f){
-                    emissor.write(aux.encode());
+                for(int j = f.length-1; j >= 0; j--){
+                    emissor.write(f[j].encode());
                     emissor.flush();
                 }
+                
+//                for(Freime aux : f){
+//                    emissor.write(aux.encode());
+//                    emissor.flush();
+//                }
                 
                 while(true){
                     try{
