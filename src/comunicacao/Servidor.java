@@ -1,13 +1,11 @@
 package comunicacao;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.Charset;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -18,13 +16,13 @@ import java.util.logging.Logger;
  */
 public class Servidor implements Runnable{
     private final int port;
-    private final int tam;
     private final int janela;
+    private final String filename;
     
-    public Servidor(int port, int tam, int maxf){
+    public Servidor(int port, int maxf, String filename){
         this.port = port;
-        this.tam = tam;
         this.janela = maxf;
+        this.filename = filename;
     }
     
     @Override
@@ -32,8 +30,8 @@ public class Servidor implements Runnable{
         try{
             ServerSocket server = new ServerSocket(port);   
             Freime f;
-            File saida = new File("saida.txt");
-            BufferedWriter writer = new BufferedWriter(new FileWriter(saida));
+            FileOutputStream saida = new FileOutputStream(filename);
+            BufferedOutputStream writer = new BufferedOutputStream(saida);
             
             while (true){
                 Socket client = server.accept();
@@ -48,10 +46,11 @@ public class Servidor implements Runnable{
                 do{ 
                     System.out.println("Servidor: Verificando frame.. ");
 
-                    f = new Freime(receptor.readNBytes(tam + 15));
+                    f = new Freime(receptor.readNBytes(15));//LÊ O CABEÇALHO PRIMEIRO
                     
-                    if(f.decode()){
-                        if(f.chk == f.Cheksum(f.msg.getBytes(Charset.forName("UTF-8")))){
+                    if(f.decode() && f.getInfo(receptor.readNBytes(f.len))){
+                        
+                        if(f.chk == f.Cheksum(f.msg)){
                             if(espera == f.ack){
                                 writer.write(f.msg);
                                 emissor.write(f.ack);
@@ -72,6 +71,7 @@ public class Servidor implements Runnable{
                 } while(client.isConnected() && !client.isClosed());
                 
                 server.close();
+                writer.flush();
                 writer.close();
                 break;
             }

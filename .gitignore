@@ -2,3 +2,5 @@
 /test/*
 *.mf
 *.jar
+*.jpg
+/dist/

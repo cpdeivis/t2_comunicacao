@@ -1,6 +1,8 @@
 package comunicacao;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -20,15 +22,15 @@ import java.util.Arrays;
 public class Cliente implements Runnable{
     private final int port;
     private final int tam;
-    private final char flag;
     private final int maxf;
+    private final String filename;
     private Socket client;
     
-    public Cliente(int port, int tam, int maxf, char flag){
+    public Cliente(int port, int tam, int maxf, String filename){
         this.port = port;
         this.maxf = maxf;
         this.tam = tam;
-        this.flag = flag;
+        this.filename = filename;
     }
     
     @Override
@@ -36,7 +38,7 @@ public class Cliente implements Runnable{
         try{
             //CONFIGURAÇÃO DO SOCKET AQUI
             client = new Socket("127.0.0.1", port);
-            client.setSoTimeout(2500);
+            client.setSoTimeout(1000);
             //TESTE DE CONEXÃO AQUI
             InputStream receptor = client.getInputStream();
             OutputStream emissor = client.getOutputStream();
@@ -56,15 +58,15 @@ public class Cliente implements Runnable{
                 f = montaJanela(frames, i);
                 
 //                TESTE PARA DESLOCAMENTO DA JANELA
-                for(int j = f.length-1; j >= 0; j--){
-                    emissor.write(f[j].encode());
-                    emissor.flush();
-                }
-                
-//                for(Freime aux : f){
-//                    emissor.write(aux.encode());
+//                for(int j = f.length-1; j >= 0; j--){
+//                    emissor.write(f[j].encode());
 //                    emissor.flush();
 //                }
+                
+                for(Freime aux : f){
+                    emissor.write(aux.encode());
+                    emissor.flush();
+                }
                 
                 while(true){
                     try{
@@ -108,26 +110,26 @@ public class Cliente implements Runnable{
     
     public ArrayList<Freime> criaFrames(int endP, int endC) throws FileNotFoundException, IOException{
         ArrayList<Freime> fr = new ArrayList();
-        String pedaco;
-        String s = lerTxt();
+        //String pedaco;
+        //String s = lerTxt();
+        byte[] buffer = readBytes(new File(filename));
+        byte[] pedaco;
         int i = 0, j = tam, ind = 0;
-        if(s.length() > tam){                
-            while(j < s.length()){
-                pedaco = s.substring(i, j);
-                fr.add(new Freime(pedaco, flag, endP, endC, ind));
+        if(buffer.length > tam){                
+            while(j < buffer.length){
+                pedaco = Arrays.copyOfRange(buffer, i, j);
+                //pedaco = s.substring(i, j);
+                fr.add(new Freime(pedaco, endP, endC, ind));
                 i += tam;
                 j += tam;
                 ind++;
-                if(j > s.length()){
-                    j = s.length() - i;
+                if(j > buffer.length){
+                    j = buffer.length - i;
                     j += i;
-                    pedaco = s.substring(i, j);
+                    pedaco = Arrays.copyOfRange(buffer, i, j);
+                    //pedaco = s.substring(i, j);
                     
-                    char[] repeat = new char[tam - pedaco.length()];
-                    Arrays.fill(repeat, ' ');
-                    pedaco += new String(repeat);
-                    //System.out.println(pedaco.length());
-                    fr.add(new Freime(pedaco, flag, endP, endC, ind));
+                    fr.add(new Freime(pedaco, endP, endC, ind));
                     ind++;
                 }
                 if(ind == maxf){
@@ -135,7 +137,7 @@ public class Cliente implements Runnable{
                 }
             }
         }else{
-            fr.add(new Freime(s, flag, endP, endC, ind));
+            fr.add(new Freime(buffer, endP, endC, ind));
         }
         return fr;
     }
@@ -156,5 +158,24 @@ public class Cliente implements Runnable{
             buffer.close();
         }
         return texto;
+    }
+    
+    private byte[] readBytes(File file) throws IOException{
+        byte[] buffer = new byte[(int) file.length()];
+        InputStream ios = null;
+        try {
+            ios = new FileInputStream(file);
+            if (ios.read(buffer) == -1) {
+                throw new IOException(
+                        "EOF reached while trying to read the whole file");
+            }
+        } finally {
+            try {
+                if (ios != null)
+                    ios.close();
+            } catch (IOException e) {
+            }
+        }
+        return buffer;
     }
 }
