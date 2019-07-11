@@ -20,17 +20,19 @@ import java.util.Arrays;
  * @author cpdeivis
  */
 public class Cliente implements Runnable{
+    private final Boolean teste;
     private final int port;
     private final int tam;
     private final int maxf;
     private final String filename;
     private Socket client;
     
-    public Cliente(int port, int tam, int maxf, String filename){
+    public Cliente(int port, int tam, int maxf, String filename, Boolean t){
         this.port = port;
         this.maxf = maxf;
         this.tam = tam;
         this.filename = filename;
+        this.teste = t;
     }
     
     @Override
@@ -45,8 +47,8 @@ public class Cliente implements Runnable{
             emissor.flush();
             
             //127.0.0.1 -> 2130706433
-            ArrayList<Freime> frames = criaFrames(2130706433, 2130706433);
-            Freime[] f;
+            ArrayList<Frame> frames = criaFrames(2130706433, 2130706433);
+            Frame[] f;
             
             System.out.println("Client: Enviando " + frames.size() + " frames..");
             
@@ -57,17 +59,17 @@ public class Cliente implements Runnable{
                 System.out.println("Client: Gerando id para o bloco");
                 f = montaJanela(frames, i);
                 
-//                TESTE PARA DESLOCAMENTO DA JANELA
-//                for(int j = f.length-1; j >= 0; j--){
-//                    emissor.write(f[j].encode());
-//                    emissor.flush();
-//                }
-                
-                for(Freime aux : f){
-                    emissor.write(aux.encode());
-                    emissor.flush();
+                if(teste){ // TESTE PARA DESLOCAMENTO DA JANELA
+                    for(int j = f.length-1; j >= 0; j--){
+                        emissor.write(f[j].encode());
+                        emissor.flush();
+                    }
+                } else{
+                    for(Frame aux : f){
+                        emissor.write(aux.encode());
+                        emissor.flush();
+                    }
                 }
-                
                 while(true){
                     try{
                         confirma = (int) receptor.read();
@@ -91,12 +93,12 @@ public class Cliente implements Runnable{
         }
     }
     
-    public Freime[] montaJanela (ArrayList<Freime> fr, int ind){
-        Freime[] f;
+    public Frame[] montaJanela (ArrayList<Frame> fr, int ind){
+        Frame[] f;
         if(fr.size() < ind + maxf){
-            f = new Freime[fr.size() - ind];
+            f = new Frame[fr.size() - ind];
         }else{
-            f = new Freime[maxf];
+            f = new Frame[maxf];
         }
         for (int i = 0; i < maxf; i++){
             if(ind < fr.size()){
@@ -108,18 +110,15 @@ public class Cliente implements Runnable{
         return f;
     }
     
-    public ArrayList<Freime> criaFrames(int endP, int endC) throws FileNotFoundException, IOException{
-        ArrayList<Freime> fr = new ArrayList();
-        //String pedaco;
-        //String s = lerTxt();
+    public ArrayList<Frame> criaFrames(int endP, int endC) throws FileNotFoundException, IOException{
+        ArrayList<Frame> fr = new ArrayList();
         byte[] buffer = readBytes(new File(filename));
         byte[] pedaco;
         int i = 0, j = tam, ind = 0;
         if(buffer.length > tam){                
             while(j < buffer.length){
                 pedaco = Arrays.copyOfRange(buffer, i, j);
-                //pedaco = s.substring(i, j);
-                fr.add(new Freime(pedaco, endP, endC, ind));
+                fr.add(new Frame(pedaco, endP, endC, ind));
                 i += tam;
                 j += tam;
                 ind++;
@@ -127,9 +126,8 @@ public class Cliente implements Runnable{
                     j = buffer.length - i;
                     j += i;
                     pedaco = Arrays.copyOfRange(buffer, i, j);
-                    //pedaco = s.substring(i, j);
                     
-                    fr.add(new Freime(pedaco, endP, endC, ind));
+                    fr.add(new Frame(pedaco, endP, endC, ind));
                     ind++;
                 }
                 if(ind == maxf){
@@ -137,27 +135,9 @@ public class Cliente implements Runnable{
                 }
             }
         }else{
-            fr.add(new Freime(buffer, endP, endC, ind));
+            fr.add(new Frame(buffer, endP, endC, ind));
         }
         return fr;
-    }
-    
-    private String lerTxt() throws FileNotFoundException, IOException{
-        BufferedReader buffer = new BufferedReader(new FileReader("airplane.txt"));
-        String texto;
-        //Leitura do arquivo
-        try{
-            StringBuilder s = new StringBuilder();
-            String linhas = buffer.readLine();
-            while (linhas != null) {
-                s.append(linhas);
-                linhas = buffer.readLine();
-            }
-            texto = s.toString();
-        } finally {
-            buffer.close();
-        }
-        return texto;
     }
     
     private byte[] readBytes(File file) throws IOException{

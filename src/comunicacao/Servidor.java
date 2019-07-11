@@ -29,7 +29,7 @@ public class Servidor implements Runnable{
     public void run(){
         try{
             ServerSocket server = new ServerSocket(port);   
-            Freime f;
+            Frame f;
             FileOutputStream saida = new FileOutputStream(filename);
             BufferedOutputStream writer = new BufferedOutputStream(saida);
             
@@ -46,7 +46,7 @@ public class Servidor implements Runnable{
                 do{ 
                     System.out.println("Servidor: Verificando frame.. ");
 
-                    f = new Freime(receptor.readNBytes(15));//LÊ O CABEÇALHO PRIMEIRO
+                    f = new Frame(receptor.readNBytes(15));//LÊ O CABEÇALHO PRIMEIRO
                     
                     if(f.decode() && f.getInfo(receptor.readNBytes(f.len))){
                         
